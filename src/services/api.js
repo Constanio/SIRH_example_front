@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api',
+  // Par défaut, on utilise le back sur Render
+  baseURL: import.meta.env.VITE_API_URL || 'https://sirh-example-back.onrender.com/api',
   headers: {
     'Content-Type': 'application/json'
   }
