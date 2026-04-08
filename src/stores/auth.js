@@ -4,8 +4,8 @@ import api from '@/services/api';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: JSON.parse(localStorage.getItem('user')) || null,
-    token: localStorage.getItem('token') || null,
+    user: JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user')) || null,
+    token: localStorage.getItem('token') || sessionStorage.getItem('token') || null,
   }),
   getters: {
     isAuthenticated: (state) => !!state.token,
@@ -13,13 +13,15 @@ export const useAuthStore = defineStore('auth', {
     isRH: (state) => state.user?.role === 'rh',
   },
   actions: {
-    async login(email, password) {
+    async login(email, password, remember = true) {
       try {
         const response = await api.post('/auth/login', { email, password });
         this.token = response.data.token;
         this.user = response.data.user;
-        localStorage.setItem('token', this.token);
-        localStorage.setItem('user', JSON.stringify(this.user));
+        const storage = remember ? localStorage : sessionStorage;
+        storage.setItem('token', this.token);
+        storage.setItem('user', JSON.stringify(this.user));
+        axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
         return true;
       } catch (error) {
         console.error('Erreur login:', error);
@@ -31,6 +33,8 @@ export const useAuthStore = defineStore('auth', {
       this.user = null;
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
       delete axios.defaults.headers.common['Authorization'];
     },
     init() {

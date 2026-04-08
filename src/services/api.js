@@ -8,9 +8,13 @@ const api = axios.create({
   }
 });
 
+function getToken() {
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
+}
+
 // Intercepteur pour ajouter le token JWT à chaque requête
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
+  const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,6 +27,9 @@ api.interceptors.response.use(
   error => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

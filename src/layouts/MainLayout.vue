@@ -11,7 +11,7 @@ const toggleSidebar = () => {
 </script>
 
 <template>
-    <div class="flex h-screen bg-[#F8FAFC] font-['Inter'] selection:bg-indigo-100 selection:text-indigo-900">
+    <div class="flex h-screen bg-[#F8FAFC] dark:bg-[#020617] font-['Inter'] selection:bg-indigo-100 selection:text-indigo-900 dark:selection:bg-indigo-500/30 dark:selection:text-indigo-100">
         <!-- Sidebar -->
         <aside
             class="fixed inset-y-0 left-0 z-50 w-72 transform transition-all duration-500 ease-in-out lg:relative lg:translate-x-0"
@@ -55,6 +55,13 @@ const toggleSidebar = () => {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #cbd5e1;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569;
 }
 
 /* Base animations */
