@@ -1,13 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import axios from 'axios';
+import api from '@/services/api';
 import { User, Mail, Shield, Briefcase, Hash, Calendar } from 'lucide-vue-next';
 
 const profile = ref(null);
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:4000/api/auth/me');
+    const res = await api.get('/auth/me');
     profile.value = res.data;
   } catch (err) {
     console.error("Erreur profil", err);
