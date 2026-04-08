@@ -151,47 +151,77 @@ onMounted(fetchData);
         <div v-if="activeTab === 'mes_conges'" class="space-y-10 animate-in fade-in duration-500">
             <!-- Soldes Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div v-for="solde in soldes" :key="solde.id" class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm group">
-                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-6"><PieChart class="w-6 h-6" /></div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{{ solde.type_conge.nom }}</p>
-                    <h2 class="text-4xl font-black text-slate-900 tracking-tighter">{{ solde.jours_restants }} <span class="text-lg text-slate-300 font-bold">jours</span></h2>
+                <div v-for="(solde, index) in soldes" :key="solde.id" 
+                     :class="[
+                         'p-8 rounded-[2.5rem] border border-white/20 shadow-xl text-white relative overflow-hidden group transition-all hover:scale-[1.02]',
+                         index === 0 ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-100' : 
+                         index === 1 ? 'bg-gradient-to-br from-emerald-400 to-teal-600 shadow-emerald-100' : 
+                         'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-100'
+                     ]">
+                    <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-125 transition-transform">
+                        <PieChart class="w-32 h-32" />
+                    </div>
+                    <div class="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6">
+                        <PieChart class="w-6 h-6 text-white" />
+                    </div>
+                    <p class="text-[10px] font-black text-white/80 uppercase tracking-widest mb-1">{{ solde.type_conge.nom }}</p>
+                    <h2 class="text-4xl font-black text-white tracking-tighter">{{ solde.jours_restants }} <span class="text-lg text-white/60 font-bold">jours</span></h2>
                 </div>
             </div>
 
             <!-- Mes Demandes Table -->
             <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-                <div class="p-8 border-b border-slate-50 flex items-center gap-4">
-                    <History class="w-5 h-5 text-slate-400" />
-                    <h2 class="text-xl font-black text-slate-900 tracking-tight">Mon Historique</h2>
+                <div class="p-8 border-b border-slate-50 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
+                            <History class="w-5 h-5" />
+                        </div>
+                        <h2 class="text-xl font-black text-slate-900 tracking-tight">Mon Historique</h2>
+                    </div>
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {{ demandes.length }} demandes au total
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead>
                             <tr class="bg-slate-50/50 text-slate-400 text-[10px] uppercase tracking-[0.2em] font-black">
                                 <th class="px-8 py-5">Type / Motif</th>
-                                <th class="px-8 py-5">Période</th>
-                                <th class="px-8 py-5">Jours</th>
+                                <th class="px-8 py-5">Période d'absence</th>
+                                <th class="px-8 py-5">Durée</th>
                                 <th class="px-8 py-5">Statut</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50">
-                            <tr v-for="demande in demandes" :key="demande.id" class="hover:bg-slate-50/30 transition-all">
+                            <tr v-for="demande in demandes" :key="demande.id" class="hover:bg-slate-50/30 transition-all group">
                                 <td class="px-8 py-6">
-                                    <p class="text-sm font-black text-slate-900">{{ demande.type_conge?.nom }}</p>
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase truncate max-w-[200px]">{{ demande.motif || "Aucun motif" }}</p>
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{{ demande.type_conge?.nom }}</span>
+                                        <span class="text-[10px] text-slate-400 font-bold uppercase truncate max-w-[200px]">{{ demande.motif || "Aucun motif précisé" }}</span>
+                                    </div>
                                 </td>
                                 <td class="px-8 py-6">
-                                    <div class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                    <div class="inline-flex items-center px-4 py-2 bg-slate-50 rounded-2xl gap-3 text-xs font-bold text-slate-600 border border-slate-100">
                                         <span>{{ formatDate(demande.date_debut) }}</span>
                                         <ArrowRight class="w-3 h-3 text-slate-300" />
                                         <span>{{ formatDate(demande.date_fin) }}</span>
                                     </div>
                                 </td>
-                                <td class="px-8 py-6 text-xs font-black text-slate-900">{{ demande.jours_demandes }} j</td>
                                 <td class="px-8 py-6">
-                                    <span :class="getStatusClass(demande.statut)" class="px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest">
+                                    <span class="text-xs font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">{{ demande.jours_demandes }} j</span>
+                                </td>
+                                <td class="px-8 py-6">
+                                    <span :class="getStatusClass(demande.statut)" class="px-4 py-2 rounded-full border text-[9px] font-black uppercase tracking-widest shadow-sm">
                                         {{ demande.statut.replace('_', ' ') }}
                                     </span>
+                                </td>
+                            </tr>
+                            <tr v-if="demandes.length === 0">
+                                <td colspan="4" class="px-8 py-16 text-center">
+                                    <div class="flex flex-col items-center gap-3 opacity-20">
+                                        <CalendarIcon class="w-12 h-12" />
+                                        <p class="font-black text-xs uppercase tracking-widest">Aucun historique de congés</p>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
