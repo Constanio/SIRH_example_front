@@ -10,6 +10,8 @@ import Salaires from '../views/Salaires.vue';
 import Evaluations from '../views/Evaluations.vue';
 import Organisation from '../views/Organisation.vue';
 import TypesConges from '../views/TypesConges.vue';
+import DossierRH from '../views/DossierRH.vue';
+import Recrutement from '../views/Recrutement.vue';
 
 const routes = [
   { path: '/login', name: 'Login', component: Login },
@@ -23,7 +25,7 @@ const routes = [
     path: '/employes', 
     name: 'Employes', 
     component: Employes,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['admin', 'rh', 'manager'] }
   },
   { 
     path: '/conges', 
@@ -41,31 +43,43 @@ const routes = [
     path: '/organisation', 
     name: 'Organisation', 
     component: Organisation,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['admin', 'rh', 'manager'] }
   },
   { 
     path: '/types-conges', 
     name: 'TypesConges', 
     component: TypesConges,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['admin', 'rh'] }
   },
   { 
     path: '/salaires', 
     name: 'Salaires', 
     component: Salaires,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['admin', 'rh'] }
   },
   { 
     path: '/paie', 
     name: 'Paie', 
     component: Paie,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['admin', 'rh'] }
   },
   { 
     path: '/evaluations', 
     name: 'Evaluations', 
     component: Evaluations,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['admin', 'rh', 'manager'] }
+  },
+  {
+    path: '/dossier-rh/:id',
+    name: 'DossierRH',
+    component: DossierRH,
+    meta: { requiresAuth: true, roles: ['admin', 'rh', 'manager'] }
+  },
+  {
+    path: '/recrutement',
+    name: 'Recrutement',
+    component: Recrutement,
+    meta: { requiresAuth: true, roles: ['admin', 'rh', 'manager'] }
   },
   { path: '/', redirect: '/dashboard' }
 ];
@@ -77,11 +91,21 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore();
+  
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     next('/login');
-  } else {
-    next();
+    return;
   }
+
+  if (to.meta.roles && auth.isAuthenticated) {
+    const userRole = auth.user?.role;
+    if (!to.meta.roles.includes(userRole)) {
+      next('/dashboard');
+      return;
+    }
+  }
+
+  next();
 });
 
 export default router;

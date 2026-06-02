@@ -11,6 +11,12 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: (state) => !!state.token,
     isAdmin: (state) => state.user?.role === 'admin',
     isRH: (state) => state.user?.role === 'rh',
+    isManager: (state) => ['admin', 'rh', 'manager'].includes(state.user?.role),
+    isEmploye: (state) => state.user?.role === 'employe',
+    roleLevel: (state) => {
+      const levels = { admin: 4, rh: 3, manager: 2, employe: 1 };
+      return levels[state.user?.role] || 0;
+    },
   },
   actions: {
     async login(email, password, remember = true) {

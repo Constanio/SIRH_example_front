@@ -18,6 +18,7 @@ const error = ref("");
 const isLoading = ref(false);
 const showPassword = ref(false);
 const rememberMe = ref(true);
+const formErrors = ref({email: '', password: ''});
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -25,6 +26,17 @@ const router = useRouter();
 const isFormValid = computed(() => {
     return Boolean(email.value?.trim()) && Boolean(password.value);
 });
+
+const validateField = (field) => {
+  if (field === 'email' && email.value && (!email.value.includes('@') || !email.value.includes('.'))) {
+    formErrors.value.email = 'Email invalide';
+  } else if (field === 'password' && password.value && password.value.length < 6) {
+    formErrors.value.password = 'Min 6 caractères';
+  } else {
+    formErrors.value[field] = '';
+  }
+};
+const clearError = (field) => { formErrors.value[field] = ''; };
 
 const handleLogin = async () => {
     if (!email.value || !password.value) {
@@ -111,13 +123,18 @@ const handleLogin = async () => {
                                     <Mail class="h-4 w-4 text-slate-500 group-focus-within/input:text-indigo-400 transition-colors" />
                                 </div>
                                 <input
-                                    v-model="email"
+                                    v-model.trim="email"
                                     type="email"
                                     required
+                                    maxlength="255"
                                     placeholder="nom@entreprise.com"
+                                    @blur="validateField('email')"
+                                    @focus="clearError('email')"
+                                    :class="{'border-red-500/50': formErrors.email}"
                                     class="w-full pl-11 pr-4 py-3 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none text-sm text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
                                 />
                             </div>
+                            <div v-if="formErrors.email" class="text-xs text-red-400 mt-1.5">{{ formErrors.email }}</div>
                         </div>
 
                         <!-- Password Field -->
@@ -128,7 +145,7 @@ const handleLogin = async () => {
                                 >Mot de passe</label>
                                 <a
                                     href="#"
-                                    class="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                                    class="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
                                 >Oublié ?</a>
                             </div>
                             <div class="relative group/input">
@@ -139,19 +156,24 @@ const handleLogin = async () => {
                                     v-model="password"
                                     :type="showPassword ? 'text' : 'password'"
                                     required
+                                    maxlength="72"
                                     placeholder="••••••••"
-                                    class="w-full pl-11 pr-12 py-3 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none text-sm text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
+                                    @blur="validateField('password')"
+                                    @focus="clearError('password')"
+                                    :class="{'border-red-500/50': formErrors.password}"
+                                    class="w-full pl-11 pr-4 py-3 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none text-sm text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
                                 />
                                 <button
                                     type="button"
                                     @click="showPassword = !showPassword"
                                     :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
-                                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-200 transition-colors"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-200 transition-colors cursor-pointer"
                                 >
                                     <Eye v-if="!showPassword" class="w-4 h-4" />
                                     <EyeOff v-else class="w-4 h-4" />
                                 </button>
                             </div>
+                            <div v-if="formErrors.password" class="text-xs text-red-400 mt-1.5">{{ formErrors.password }}</div>
                         </div>
 
                         <!-- Options -->
@@ -203,8 +225,17 @@ const handleLogin = async () => {
                 </div>
             </div>
 
+            <!-- Demo Credentials -->
+            <div class="mt-4 text-center animate-in fade-in duration-1000 delay-200">
+                <div class="bg-slate-900/30 backdrop-blur-xl p-3 rounded-xl border border-slate-800/30">
+                    <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wider mb-1.5">Accès démo</p>
+                    <p class="text-[11px] text-slate-400 font-mono">admin@sirh.com</p>
+                    <p class="text-[11px] text-slate-400 font-mono">password123</p>
+                </div>
+            </div>
+
             <!-- Footer -->
-            <div class="mt-8 text-center space-y-6 animate-in fade-in duration-1000 delay-300">
+            <div class="mt-6 text-center space-y-6 animate-in fade-in duration-1000 delay-300">
                 <p class="text-slate-500 text-xs font-medium">
                     En vous connectant, vous acceptez nos 
                     <a href="#" class="text-slate-400 hover:text-indigo-400 underline underline-offset-4 transition-colors">Conditions d'utilisation</a>

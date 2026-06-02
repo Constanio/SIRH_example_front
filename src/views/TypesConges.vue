@@ -2,12 +2,20 @@
 import { computed, onMounted, ref } from "vue";
 import api from "../services/api";
 import { useToastStore } from "../stores/toast";
-import { Plus, Search, X, Trash2, Edit, SlidersHorizontal, ChevronDown } from "lucide-vue-next";
+import { Plus, Search, Trash2, Edit, SlidersHorizontal, ChevronDown } from "lucide-vue-next";
 
 const toast = useToastStore();
 const isLoading = ref(true);
+const isSaving = ref(false);
 const types = ref([]);
 const query = ref("");
+
+const typeErrors = ref({nom: ''});
+const clearTypeError = (field) => { typeErrors.value[field] = ''; };
+const validateTypeField = (field) => {
+  if (field === 'nom' && !form.value.nom.trim()) { typeErrors.value.nom = 'Requis'; return; }
+  typeErrors.value[field] = '';
+};
 
 const showModal = ref(false);
 const editing = ref(null);
@@ -61,6 +69,7 @@ const openEdit = (t) => {
 };
 
 const save = async () => {
+  isSaving.value = true;
   try {
     if (!form.value.nom?.trim()) {
       toast.error("Le nom est requis");
@@ -77,6 +86,8 @@ const save = async () => {
     await fetchTypes();
   } catch (e) {
     toast.error("Action non autorisée (RH/Admin) ou erreur serveur");
+  } finally {
+    isSaving.value = false;
   }
 };
 
@@ -167,57 +178,174 @@ const del = async (id) => {
     </div>
 
     <Teleport to="body">
-      <div v-if="showModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" @click="showModal = false"></div>
-        <div class="bg-white rounded-[2.5rem] w-full max-w-lg p-10 shadow-2xl relative z-10">
-          <button @click="showModal = false" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 rounded-xl transition-all">
-            <X class="w-6 h-6" />
-          </button>
-          <div class="flex items-center gap-3 mb-8">
-            <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-              <SlidersHorizontal class="w-5 h-5" />
-            </div>
-            <h2 class="text-2xl font-black text-slate-900 tracking-tight">{{ editing ? "Modifier le type" : "Nouveau type" }}</h2>
-          </div>
+      <Transition name="modal-fade">
+        <div v-if="showModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-slate-900/50 to-slate-800/40 backdrop-blur-md transition-all" @click="showModal = false"></div>
 
-          <div class="space-y-5">
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nom</label>
-              <input v-model="form.nom" class="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-slate-700" />
-            </div>
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Description</label>
-              <textarea v-model="form.description" class="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-slate-700 h-24 resize-none"></textarea>
-            </div>
-            <div class="grid grid-cols-2 gap-6">
-              <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Jours / an</label>
-                <input v-model.number="form.jours_par_an" type="number" class="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-slate-700" />
+          <div class="relative w-full max-w-lg">
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-12 -left-12 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="bg-white rounded-3xl w-full shadow-2xl relative z-10 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4">
+              <div class="relative px-8 pt-8 pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                    <SlidersHorizontal class="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 class="text-2xl font-bold text-slate-900 tracking-tight">{{ editing ? "Modifier le type" : "Nouveau type" }}</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Paramétrage des catégories</p>
+                  </div>
+                </div>
+                <button @click="showModal = false" class="absolute right-6 top-6 p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
               </div>
-              <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Approbation</label>
-                <div class="relative">
-                  <select v-model="form.necessite_approbation" class="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-slate-700 appearance-none">
-                    <option :value="true">Oui</option>
-                    <option :value="false">Non</option>
-                  </select>
-                  <ChevronDown class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+
+              <div class="p-8 space-y-6">
+                <div class="space-y-2">
+                  <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 0 1 .586 1.414V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                    </svg>
+                    Nom
+                  </label>
+                  <input v-model.trim="form.nom" @blur="validateTypeField('nom')" @focus="clearTypeError('nom')" :class="{'border-red-400': typeErrors.nom}" class="w-full px-4 py-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white outline-none font-medium text-slate-700 transition-all duration-200" />
+                  <p v-if="typeErrors.nom" class="text-xs font-bold text-red-400 mt-1 ml-1">{{ typeErrors.nom }}</p>
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+                    </svg>
+                    Description
+                  </label>
+                  <textarea v-model="form.description" class="w-full px-4 py-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white outline-none font-medium text-slate-700 transition-all duration-200 h-24 resize-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l5 5a2 2 0 0 1 .586 1.414V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                      </svg>
+                      Jours / an
+                    </label>
+                    <input v-model.number="form.jours_par_an" type="number" class="w-full px-4 py-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white outline-none font-medium text-slate-700 transition-all duration-200" />
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      Approbation
+                    </label>
+                    <div class="relative cursor-pointer">
+                      <select v-model="form.necessite_approbation" class="w-full px-4 py-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white outline-none font-medium text-slate-700 transition-all duration-200 appearance-none cursor-pointer hover:border-slate-300">
+                        <option :value="true">Oui</option>
+                        <option :value="false">Non</option>
+                      </select>
+                      <ChevronDown class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                    </svg>
+                    Couleur (hex)
+                  </label>
+                  <input v-model="form.couleur" placeholder="#4f46e5" class="w-full px-4 py-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white outline-none font-medium text-slate-700 transition-all duration-200" />
+                </div>
+
+                <div class="flex gap-3 pt-6 border-t border-slate-100">
+                  <button @click="showModal = false" class="flex-1 py-3.5 text-slate-600 font-semibold hover:bg-slate-100 rounded-xl transition-all duration-200 uppercase tracking-wider text-xs flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Annuler
+                  </button>
+                  <button @click="save" :disabled="isSaving" class="flex-1 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 uppercase tracking-wider text-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg">
+                    <span v-if="isSaving" class="flex items-center gap-2">
+                      <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                      </svg>
+                      Enregistrement...
+                    </span>
+                    <span v-else class="flex items-center gap-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      {{ editing ? "Mettre à jour" : "Créer le type" }}
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
-            <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Couleur (hex)</label>
-              <input v-model="form.couleur" placeholder="#4f46e5" class="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white outline-none font-bold text-slate-700" />
-            </div>
-
-            <div class="flex gap-4 pt-2">
-              <button @click="showModal = false" class="flex-1 py-4 text-slate-500 font-black hover:bg-slate-50 rounded-2xl transition-all uppercase tracking-widest text-xs">Annuler</button>
-              <button @click="save" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all uppercase tracking-widest text-xs">Enregistrer</button>
-            </div>
           </div>
         </div>
-      </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+
+.zoom-in-95 {
+    animation: zoomIn 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.slide-in-from-bottom-4 {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes zoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.animate-in {
+    animation: fadeIn 0.4s ease-out;
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
 

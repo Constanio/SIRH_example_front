@@ -10,6 +10,8 @@ import {
     Banknote,
     ReceiptText,
     ClipboardCheck,
+    FileText,
+    Briefcase,
     LogOut,
     Settings,
     UserCircle,
@@ -25,21 +27,25 @@ const logout = () => {
     router.push("/login");
 };
 
+const role = auth.user?.role;
+
 const menuItems = [
-    { name: "Tableau de Bord", path: "/dashboard", icon: LayoutDashboard },
-    { name: "Employés", path: "/employes", icon: Users },
-    { name: "Congés", path: "/conges", icon: Calendar },
-    { name: "Organisation", path: "/organisation", icon: Building2 },
-];
+    { name: "Tableau de Bord", path: "/dashboard", icon: LayoutDashboard, roles: null },
+    { name: "Employés", path: "/employes", icon: Users, roles: ['admin', 'rh', 'manager'] },
+    { name: "Congés", path: "/conges", icon: Calendar, roles: null },
+    { name: "Organisation", path: "/organisation", icon: Building2, roles: ['admin', 'rh', 'manager'] },
+    { name: "Recrutement", path: "/recrutement", icon: Briefcase, roles: ['admin', 'rh', 'manager'] },
+].filter(item => !item.roles || item.roles.includes(role));
 
 const secondaryItems = [
-    { name: "Mon Profil", path: "/profil", icon: UserCircle },
-    { name: "Types de congés", path: "/types-conges", icon: SlidersHorizontal },
-    { name: "Salaires", path: "/salaires", icon: Banknote },
-    { name: "Paie", path: "/paie", icon: ReceiptText },
-    { name: "Évaluations", path: "/evaluations", icon: ClipboardCheck },
-    { name: "Paramètres", path: "/parametres", icon: Settings },
-];
+    { name: "Mon Profil", path: "/profil", icon: UserCircle, roles: null },
+    { name: "Dossier RH", path: `/dossier-rh/${auth.user?.id || 1}`, icon: FileText, roles: ['admin', 'rh', 'manager'] },
+    { name: "Types de congés", path: "/types-conges", icon: SlidersHorizontal, roles: ['admin', 'rh'] },
+    { name: "Salaires", path: "/salaires", icon: Banknote, roles: ['admin', 'rh'] },
+    { name: "Paie", path: "/paie", icon: ReceiptText, roles: ['admin', 'rh'] },
+    { name: "Évaluations", path: "/evaluations", icon: ClipboardCheck, roles: ['admin', 'rh', 'manager'] },
+    { name: "Paramètres", path: "/profil", icon: Settings, roles: null },
+].filter(item => !item.roles || item.roles.includes(role));
 </script>
 
 <template>

@@ -28,6 +28,34 @@ const newEmploye = ref({
   departement_id: null, poste_id: null
 });
 
+const addLoading = ref(false);
+const updateLoading = ref(false);
+
+const addErrors = ref({prenom: '', nom: '', email: ''});
+const editErrors = ref({prenom: '', nom: '', email: ''});
+
+const validateAddField = (field) => {
+  if (field === 'email' && newEmploye.value.email && (!newEmploye.value.email.includes('@') || !newEmploye.value.email.includes('.'))) 
+    { addErrors.value.email = 'Email invalide'; return; }
+  if (field === 'prenom' && !newEmploye.value.prenom.trim()) 
+    { addErrors.value.prenom = 'Requis'; return; }
+  if (field === 'nom' && !newEmploye.value.nom.trim()) 
+    { addErrors.value.nom = 'Requis'; return; }
+  addErrors.value[field] = '';
+};
+const clearAddError = (field) => { addErrors.value[field] = ''; };
+
+const validateEditField = (field) => {
+  if (field === 'email' && selectedEmploye.value.email && (!selectedEmploye.value.email.includes('@') || !selectedEmploye.value.email.includes('.'))) 
+    { editErrors.value.email = 'Email invalide'; return; }
+  if (field === 'prenom' && !selectedEmploye.value.prenom.trim()) 
+    { editErrors.value.prenom = 'Requis'; return; }
+  if (field === 'nom' && !selectedEmploye.value.nom.trim()) 
+    { editErrors.value.nom = 'Requis'; return; }
+  editErrors.value[field] = '';
+};
+const clearEditError = (field) => { editErrors.value[field] = ''; };
+
 const normalized = (v) => (v ?? '').toString().trim().toLowerCase();
 
 const displayedEmployes = computed(() => {
@@ -84,6 +112,7 @@ const fetchAll = async () => {
 };
 
 const addEmploye = async () => {
+  addLoading.value = true;
   try {
     await api.post('/auth/register', newEmploye.value);
     showAddModal.value = false;
@@ -92,6 +121,8 @@ const addEmploye = async () => {
     newEmploye.value = { prenom: '', nom: '', email: '', role: 'employe', password: 'password123', departement_id: null, poste_id: null };
   } catch (err) {
     toast.error("Erreur lors de l'ajout de l'employé");
+  } finally {
+    addLoading.value = false;
   }
 };
 
@@ -106,6 +137,7 @@ const openEdit = (emp) => {
 };
 
 const updateEmploye = async () => {
+  updateLoading.value = true;
   try {
     const payload = {
         prenom: selectedEmploye.value.prenom,
@@ -122,6 +154,8 @@ const updateEmploye = async () => {
     fetchAll();
   } catch (err) {
     toast.error("Erreur lors de la mise à jour");
+  } finally {
+    updateLoading.value = false;
   }
 };
 
@@ -167,7 +201,7 @@ onMounted(fetchAll);
           />
         </div>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div class="relative">
+          <div class="relative cursor-pointer">
             <Filter class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 transition-colors" />
             <select v-model="departementFilter" class="pl-11 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 rounded-2xl text-sm font-black text-slate-700 dark:text-slate-200 outline-none transition-all appearance-none min-w-[220px]">
               <option value="tous">Tous les départements</option>
@@ -175,7 +209,7 @@ onMounted(fetchAll);
             </select>
             <ChevronDown class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           </div>
-          <div class="relative">
+          <div class="relative cursor-pointer">
             <ShieldCheck class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 transition-colors" />
             <select v-model="roleFilter" class="pl-11 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 rounded-2xl text-sm font-black text-slate-700 dark:text-slate-200 outline-none transition-all appearance-none min-w-[180px]">
               <option value="tous">Tous les rôles</option>
@@ -269,16 +303,21 @@ onMounted(fetchAll);
 
     <!-- Modal Détails -->
     <Teleport to="body">
+      <Transition name="modal-fade">
       <div v-if="showDetailsModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xl transition-all" @click="showDetailsModal = false"></div>
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-slate-900/50 to-slate-800/40 dark:from-slate-950/80 dark:via-slate-950/60 dark:to-slate-900/50 backdrop-blur-md transition-all" @click="showDetailsModal = false"></div>
         
-        <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 max-w-2xl w-full shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 transition-colors">
+        <div class="relative w-full max-w-2xl">
+          <div class="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -bottom-12 -left-12 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 w-full shadow-2xl relative z-10 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4">
           <button @click="showDetailsModal = false" class="absolute top-8 right-8 text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">
-            <X class="w-6 h-6" />
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
 
           <div class="flex items-center gap-8 mb-12">
-            <div class="w-24 h-24 rounded-[2rem] bg-indigo-600 text-white flex items-center justify-center font-black text-3xl shadow-xl shadow-indigo-100 dark:shadow-none transition-all">
+            <div class="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-black text-3xl shadow-xl shadow-indigo-500/25 transition-all">
               {{ selectedEmploye.prenom[0] }}{{ selectedEmploye.nom[0] }}
             </div>
             <div>
@@ -325,66 +364,100 @@ onMounted(fetchAll);
             </div>
           </div>
 
-          <div class="mt-12 pt-8 border-t border-slate-50 dark:border-slate-800 flex justify-end transition-colors">
-            <button @click="openEdit(selectedEmploye); showDetailsModal = false" class="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 dark:shadow-none transition-all">
+          <div class="mt-12 pt-8 border-t border-slate-50 dark:border-slate-800 transition-colors">
+            <button @click="openEdit(selectedEmploye); showDetailsModal = false" class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 uppercase tracking-wider text-xs flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
               Modifier le profil
             </button>
           </div>
+          </div>
         </div>
       </div>
+      </Transition>
     </Teleport>
 
     <!-- Modal Modification -->
     <Teleport to="body">
+      <Transition name="modal-fade">
       <div v-if="showEditModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xl transition-all" @click="showEditModal = false"></div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 max-w-lg w-full shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 transition-colors">
-          <div class="flex justify-between items-center mb-10 text-left">
-            <div>
-              <h2 class="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight transition-colors">Modifier l'employé</h2>
-              <p class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase mt-1 tracking-widest transition-colors">Édition des informations</p>
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-slate-900/50 to-slate-800/40 dark:from-slate-950/80 dark:via-slate-950/60 dark:to-slate-900/50 backdrop-blur-md transition-all" @click="showEditModal = false"></div>
+        
+        <div class="relative w-full max-w-lg">
+          <div class="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -bottom-12 -left-12 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div class="bg-white dark:bg-slate-900 rounded-3xl w-full shadow-2xl relative z-10 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4">
+          <div class="relative px-8 pt-8 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Modifier l'employé</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Édition des informations</p>
+              </div>
             </div>
-            <button @click="showEditModal = false" class="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">
-              <X class="w-6 h-6" />
+            <button @click="showEditModal = false" class="absolute right-6 top-6 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
           </div>
-
-          <div class="space-y-6 text-left">
+          
+          <div class="p-8 space-y-6">
             <div class="grid grid-cols-2 gap-6">
               <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Prénom</label>
-                <input v-model="selectedEmploye.prenom" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all font-bold text-slate-700 dark:text-slate-200" />
+                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                  Prénom
+                </label>
+                <input v-model.trim="selectedEmploye.prenom" maxlength="100" @blur="validateEditField('prenom')" @focus="clearEditError('prenom')" :class="{'border-red-400': editErrors.prenom}" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 transition-all duration-200" />
+                <p v-if="editErrors.prenom" class="text-red-500 text-xs mt-1 font-bold">{{ editErrors.prenom }}</p>
               </div>
               <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Nom</label>
-                <input v-model="selectedEmploye.nom" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all font-bold text-slate-700 dark:text-slate-200" />
+                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                  Nom
+                </label>
+                <input v-model.trim="selectedEmploye.nom" maxlength="100" @blur="validateEditField('nom')" @focus="clearEditError('nom')" :class="{'border-red-400': editErrors.nom}" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 transition-all duration-200" />
+                <p v-if="editErrors.nom" class="text-red-500 text-xs mt-1 font-bold">{{ editErrors.nom }}</p>
               </div>
             </div>
 
             <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Email professionnel</label>
-              <input v-model="selectedEmploye.email" type="email" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all font-bold text-slate-700 dark:text-slate-200" />
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                Email professionnel
+              </label>
+              <input v-model="selectedEmploye.email" type="email" maxlength="255" @blur="validateEditField('email')" @focus="clearEditError('email')" :class="{'border-red-400': editErrors.email}" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 transition-all duration-200" />
+              <p v-if="editErrors.email" class="text-red-500 text-xs mt-1 font-bold">{{ editErrors.email }}</p>
             </div>
 
             <div class="grid grid-cols-2 gap-6">
               <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Département</label>
-                <select v-model="selectedEmploye.departement_id" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none font-bold text-slate-700 dark:text-slate-200 appearance-none transition-all">
+                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                  Département
+                </label>
+                <select v-model="selectedEmploye.departement_id" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 appearance-none transition-all duration-200 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600">
                   <option v-for="d in departements" :key="d.id" :value="d.id">{{ d.nom }}</option>
                 </select>
               </div>
               <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Poste</label>
-                <select v-model="selectedEmploye.poste_id" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none font-bold text-slate-700 dark:text-slate-200 appearance-none transition-all">
+                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                  Poste
+                </label>
+                <select v-model="selectedEmploye.poste_id" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 appearance-none transition-all duration-200 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600">
                   <option v-for="p in postes" :key="p.id" :value="p.id">{{ p.titre }}</option>
                 </select>
               </div>
             </div>
 
             <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Rôle Système</label>
-              <select v-model="selectedEmploye.role" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none font-bold text-slate-700 dark:text-slate-200 appearance-none transition-all">
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                Rôle Système
+              </label>
+              <select v-model="selectedEmploye.role" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 appearance-none transition-all duration-200 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600">
                 <option value="employe">Employé</option>
                 <option value="rh">RH</option>
                 <option value="manager">Manager</option>
@@ -393,58 +466,100 @@ onMounted(fetchAll);
             </div>
           </div>
 
-          <div class="mt-10 flex gap-4">
-            <button @click="showEditModal = false" class="flex-1 py-4 text-slate-500 dark:text-slate-400 font-black hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all uppercase tracking-widest text-xs">Annuler</button>
-            <button @click="updateEmploye" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all uppercase tracking-widest text-xs">Enregistrer</button>
+          <div class="flex gap-3 pt-6 border-t border-slate-100 dark:border-slate-800 px-8 pb-8">
+            <button @click="showEditModal = false" class="flex-1 py-3.5 text-slate-600 dark:text-slate-400 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 uppercase tracking-wider text-xs flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              Annuler
+            </button>
+            <button @click="updateEmploye" :disabled="updateLoading" class="flex-1 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 uppercase tracking-wider text-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg">
+              <span v-if="updateLoading" class="flex items-center gap-2">
+                <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Enregistrement...
+              </span>
+              <span v-else class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                Enregistrer
+              </span>
+            </button>
+          </div>
           </div>
         </div>
       </div>
+      </Transition>
     </Teleport>
 
     <!-- Modal Ajout -->
     <Teleport to="body">
+      <Transition name="modal-fade">
       <div v-if="showAddModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xl transition-all" @click="showAddModal = false"></div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 max-w-lg w-full shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 transition-colors">
-          <div class="flex justify-between items-center mb-10 text-left">
-            <div>
-              <h2 class="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight transition-colors">Nouvel Employé</h2>
-              <p class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase mt-1 tracking-widest transition-colors">Création d'accès système</p>
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-slate-900/50 to-slate-800/40 dark:from-slate-950/80 dark:via-slate-950/60 dark:to-slate-900/50 backdrop-blur-md transition-all" @click="showAddModal = false"></div>
+        
+        <div class="relative w-full max-w-lg">
+          <div class="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -bottom-12 -left-12 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div class="bg-white dark:bg-slate-900 rounded-3xl w-full shadow-2xl relative z-10 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4">
+          <div class="relative px-8 pt-8 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Nouvel Employé</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Création d'accès système</p>
+              </div>
             </div>
-            <button @click="showAddModal = false" class="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">
-              <X class="w-6 h-6" />
+            <button @click="showAddModal = false" class="absolute right-6 top-6 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
           </div>
-
-          <div class="space-y-6 text-left">
+          
+          <div class="p-8 space-y-6">
             <div class="grid grid-cols-2 gap-6">
               <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Prénom</label>
-                <input v-model="newEmploye.prenom" placeholder="Prénom" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all font-bold text-slate-700 dark:text-slate-200" />
+                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                  Prénom
+                </label>
+                <input v-model.trim="newEmploye.prenom" placeholder="Prénom" maxlength="100" @blur="validateAddField('prenom')" @focus="clearAddError('prenom')" :class="{'border-red-400': addErrors.prenom}" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 transition-all duration-200" />
+                <p v-if="addErrors.prenom" class="text-red-500 text-xs mt-1 font-bold">{{ addErrors.prenom }}</p>
               </div>
               <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Nom</label>
-                <input v-model="newEmploye.nom" placeholder="Nom" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all font-bold text-slate-700 dark:text-slate-200" />
+                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                  Nom
+                </label>
+                <input v-model.trim="newEmploye.nom" placeholder="Nom" maxlength="100" @blur="validateAddField('nom')" @focus="clearAddError('nom')" :class="{'border-red-400': addErrors.nom}" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 transition-all duration-200" />
+                <p v-if="addErrors.nom" class="text-red-500 text-xs mt-1 font-bold">{{ addErrors.nom }}</p>
               </div>
             </div>
             
             <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Email professionnel</label>
-              <input v-model="newEmploye.email" type="email" placeholder="email@sirh.com" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all font-bold text-slate-700 dark:text-slate-200" />
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                Email professionnel
+              </label>
+              <input v-model="newEmploye.email" type="email" placeholder="email@sirh.com" maxlength="255" @blur="validateAddField('email')" @focus="clearAddError('email')" :class="{'border-red-400': addErrors.email}" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 transition-all duration-200" />
+              <p v-if="addErrors.email" class="text-red-500 text-xs mt-1 font-bold">{{ addErrors.email }}</p>
             </div>
 
             <div class="grid grid-cols-2 gap-6">
               <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Département</label>
-                <select v-model="newEmploye.departement_id" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none font-bold text-slate-700 dark:text-slate-200 appearance-none transition-all">
+                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                  Département
+                </label>
+                <select v-model="newEmploye.departement_id" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 appearance-none transition-all duration-200 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600">
                   <option :value="null">Sélectionner...</option>
                   <option v-for="d in departements" :key="d.id" :value="d.id">{{ d.nom }}</option>
                 </select>
               </div>
               <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Poste</label>
-                <select v-model="newEmploye.poste_id" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none font-bold text-slate-700 dark:text-slate-200 appearance-none transition-all">
+                <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                  Poste
+                </label>
+                <select v-model="newEmploye.poste_id" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 appearance-none transition-all duration-200 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600">
                   <option :value="null">Sélectionner...</option>
                   <option v-for="p in postes" :key="p.id" :value="p.id">{{ p.titre }}</option>
                 </select>
@@ -452,22 +567,39 @@ onMounted(fetchAll);
             </div>
 
             <div class="space-y-2">
-              <label class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 text-left block transition-colors">Rôle système</label>
-              <select v-model="newEmploye.role" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none font-bold text-slate-700 dark:text-slate-200 appearance-none transition-all">
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                Rôle système
+              </label>
+              <select v-model="newEmploye.role" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 focus:bg-white dark:focus:bg-slate-800 outline-none font-medium text-slate-700 dark:text-slate-200 appearance-none transition-all duration-200 cursor-pointer hover:border-slate-300 dark:hover:border-slate-600">
                 <option value="employe">Employé</option>
                 <option value="rh">RH</option>
                 <option value="manager">Manager</option>
                 <option value="admin">Administrateur</option>
               </select>
             </div>
-          </div>
 
-          <div class="mt-10 flex gap-4">
-            <button @click="showAddModal = false" class="flex-1 py-4 text-slate-500 dark:text-slate-400 font-black hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all uppercase tracking-widest text-xs">Annuler</button>
-            <button @click="addEmploye" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all uppercase tracking-widest text-xs">Créer l'employé</button>
+            <div class="flex gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+              <button @click="showAddModal = false" class="flex-1 py-3.5 text-slate-600 dark:text-slate-400 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 uppercase tracking-wider text-xs flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                Annuler
+              </button>
+              <button @click="addEmploye" :disabled="addLoading" class="flex-1 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 uppercase tracking-wider text-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg">
+                <span v-if="addLoading" class="flex items-center gap-2">
+                  <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                  Enregistrement...
+                </span>
+                <span v-else class="flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  Créer l'employé
+                </span>
+              </button>
+            </div>
+          </div>
           </div>
         </div>
       </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -488,6 +620,29 @@ onMounted(fetchAll);
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+.zoom-in-95 {
+    animation: zoomIn 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+.slide-in-from-bottom-4 {
+    animation: slideIn 0.3s ease-out;
+}
+@keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(1rem); }
     to { opacity: 1; transform: translateY(0); }
 }
 </style>
